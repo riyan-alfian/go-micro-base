@@ -1,0 +1,53 @@
+pipeline {
+  agent {
+        label 'master'
+  }
+    parameters {
+      string(defaultValue: "lutfi.pratama@kelaspintar.id", description: 'git config user.email ', name: 'GIT_CONFIG_EMAIL')
+      string(defaultValue: "Pratama", description: 'git config user.name', name: 'GIT_CONFIG_USERNAME')
+      string(defaultValue: "argocd", description: 'git switch branch', name: 'GIT_BRANCH_TO_SWITCH')
+      //string(defaultValue: "asia.gcr.io/sixth-well-341603/intranet-fe", description: 'put registry path for image ', name: 'Image_Registry_Path')
+      string(defaultValue: "argocd/development/deployment.yaml", description: 'path of k8s manifestfiles', name: 'Manifest_Path')
+    }
+    stages {
+      stage('Git-clone'){
+        steps{
+          git branch: 'development', credentialsId: 'gitlab_user_pass', url: 'https://gitlab.kplabs.id/backoffice/backoffice-backend.git'
+        }
+      }
+      stage('Build Docker image'){
+        steps{
+          sh "docker build --no-cache -t asia.gcr.io/kp-dev-348406/backoffice:dev-${BUILD_NUMBER} -f Dockerfile ."
+        }
+      }
+      stage('Docker push to Container Registry'){
+        steps{
+          sh "gcloud auth configure-docker asia.gcr.io --quiet"
+          sh "docker push asia.gcr.io/kp-dev-348406/backoffice:dev-${BUILD_NUMBER}"
+        }
+      }
+      stage('Git Clone for the kubeconfig code'){
+        steps {
+          git branch: 'argocd', credentialsId: 'gitlab_user_pass', url: 'https://gitlab.kplabs.id/backoffice/backoffice-backend.git'
+        }
+      }
+      stage('Update GIT') {
+        steps{
+          script{
+            catchError(buildResult: 'SUCCESS', stageResult: 'FAILURE'){
+              withCredentials([usernamePassword(credentialsId: 'gitlab_user_pass', passwordVariable: 'git_password', usernameVariable: 'git_username')]){
+                sh "git config user.email '${GIT_CONFIG_EMAIL}' "
+                sh "git config user.name '${GIT_CONFIG_USERNAME}' "
+                sh "cat '${Manifest_Path}' "
+                sh "sed -i 's+asia.gcr.io/kp-dev-348406/backoffice.*+asia.gcr.io/kp-dev-348406/backoffice:dev-${BUILD_NUMBER}+g' ${Manifest_Path} "
+                sh "cat '${Manifest_Path}' "
+                sh "git add '${Manifest_Path}' "
+                sh "git commit -m 'Done by Jenkins Job changemanifest dev-${env.BUILD_NUMBER}'"
+                sh "git push https://$git_username:'$git_password'@gitlab.kplabs.id/backoffice/backoffice-backend.git HEAD:'${GIT_BRANCH_TO_SWITCH}'"
+              }
+            }
+          }
+        }
+      }
+    }
+}

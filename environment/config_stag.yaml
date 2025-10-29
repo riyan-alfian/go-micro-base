@@ -1,0 +1,48 @@
+service_name: "media"
+
+server:
+  domain: "127.0.0.1:8006"
+  port: ":8006"
+  ingres_prefix: "/api/media"
+  environtment: "staging"
+
+nats:
+  max_reconnects: 100
+  retry: true
+  reconnect_wait_second: 3
+  server: 
+    url: "nats://ardi:ardi270897@127.0.0.1:4222,nats://ardi:ardi270897@127.0.0.1:4223,nats://ardi:ardi270897@127.0.0.1:4224,nats://ardi:ardi270897@127.0.0.1:4225"
+
+time_format:
+  time_location: "Asia/Jakarta"
+  date_ymd: "2006-01-02"
+  date_time_ymdhis: "2006-01-02 15:04:05"
+  date_time_ymdhis_tz: "2006-01-02T15:04:05Z"
+  datetime_ymdhis_ampm: "2006-01-02 15:04:05 PM"
+  time_his_ampm: "15:04:05 PM"
+  time_his: "15:04:05"
+  time_hi: "15:04"
+
+database:
+  mongo:
+    url: "mongodb://ardi:ardi270897@127.0.0.1/?retryWrites=true&w=majority&minPoolSize=5&maxPoolSize=20&maxIdleTimeMS=900000"
+    name: "jasloka"
+  postgre:
+    host: "127.0.0.1"
+    port: "5432"
+    name: "jasloka-media" 
+    username: "postgres"
+    password: "ardi270897"
+  postgre_replica:
+    host: "127.0.0.1"
+    port: "5432"
+    name: "jasloka-media" 
+    username: "postgres"
+    password: "ardi270897"
+
+cache:
+  redis:
+    host: "127.0.0.1"
+    port: "6379"
+    password: "ardi270897"
+    db: 0

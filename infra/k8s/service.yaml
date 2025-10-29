@@ -1,0 +1,68 @@
+services:
+  admin:
+    image: crpi-5x4pbdvkqepnc6pk.ap-southeast-5.personal.cr.aliyuncs.com/bid-production/service-admin:${VERSION}
+    logging:
+      driver: local # Use the local driver
+      options:
+        max-size: "20m" # Max size of each log file (e.g., 20 megabytes)
+        max-file: "3"   # Max number of log files to keep (e.g., keep 3 files)
+        compress: "true" # Optional: Compress old log files after rotation
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://10.40.96.8:3100/loki/api/v1/push"
+        loki-batch-size: 400
+        loki-batch-wait: 1s
+        loki-timeout: 10s
+        loki-max-backoff: 20s
+        loki-retries: 5
+        loki-external-labels: container_name={{.Name}},env=development
+        max-size: 5m
+        max-file: 3
+    ports:
+      - "3103:3103"
+    deploy:
+      mode: replicated
+      replicas: 2
+      placement:
+        constraints:
+          - "node.role != manager"
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+        monitor: 10s
+        max_failure_ratio: 0.1
+        order: start-first
+      rollback_config:
+        parallelism: 1
+        delay: 10s
+        monitor: 10s
+        max_failure_ratio: 0.1
+        order: start-first
+      restart_policy:
+        condition: any
+        delay: 1s
+        max_attempts: 0
+        window: 180s
+      resources:
+        limits:
+          cpus: "0.2"
+          memory: 300M
+        reservations:
+          cpus: "0.1"
+          memory: 200M
+    networks:
+      - app-production-net
+    healthcheck:
+      test: curl --fail http://localhost:3103 || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  app-production-net:
+    name: app-production-net
+    driver: overlay
+    external: true
